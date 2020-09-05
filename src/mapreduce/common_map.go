@@ -1,12 +1,14 @@
 package mapreduce
 
 import (
+	"fmt"
 	"hash/fnv"
+	"io/ioutil"
 )
 
 func doMap(
 	jobName string, // the name of the MapReduce job
-	mapTask int, // which map task this is
+	mapTask int,    // which map task this is
 	inFile string,
 	nReduce int, // the number of reduce task that will be run ("R" in the paper)
 	mapF func(filename string, contents string) []KeyValue,
@@ -53,6 +55,22 @@ func doMap(
 	//
 	// Your code here (Part I).
 	//
+	content, err := ioutil.ReadFile(inFile)
+	if err != nil {
+		debug("map read file %s err: %v\n", inFile, err)
+	}
+	keyValues := mapF(inFile, string(content))
+	keyValuesReduceMap := make(map[int]string)
+
+
+	for _, kv := range keyValues {
+		reduceIndex := ihash(kv.Key) % nReduce
+		keyValuesReduceMap[reduceIndex] = keyValuesReduceMap[reduceIndex] + fmt.Sprintf("%s,%s\n", kv.Key, kv.Value)
+	}
+	for index, value := range keyValuesReduceMap {
+		fileName := fmt.Sprintf("mrtmp.%s-im-%d-%d", jobName, mapTask, index)
+		ioutil.WriteFile(fileName, []byte(value), 0666)
+	}
 }
 
 func ihash(s string) int {
