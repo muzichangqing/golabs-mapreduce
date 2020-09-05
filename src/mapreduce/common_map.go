@@ -1,7 +1,6 @@
 package mapreduce
 
 import (
-	"fmt"
 	"hash/fnv"
 	"io/ioutil"
 )
@@ -62,13 +61,12 @@ func doMap(
 	keyValues := mapF(inFile, string(content))
 	keyValuesReduceMap := make(map[int]string)
 
-
 	for _, kv := range keyValues {
 		reduceIndex := ihash(kv.Key) % nReduce
-		keyValuesReduceMap[reduceIndex] = keyValuesReduceMap[reduceIndex] + fmt.Sprintf("%s,%s\n", kv.Key, kv.Value)
+		keyValuesReduceMap[reduceIndex] = keyValuesReduceMap[reduceIndex] + kv.Key + "," + kv.Value + "\n"
 	}
 	for index, value := range keyValuesReduceMap {
-		fileName := fmt.Sprintf("mrtmp.%s-im-%d-%d", jobName, mapTask, index)
+		fileName := reduceName(jobName, mapTask, index)
 		ioutil.WriteFile(fileName, []byte(value), 0666)
 	}
 }

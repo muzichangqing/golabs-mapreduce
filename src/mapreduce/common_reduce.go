@@ -1,5 +1,12 @@
 package mapreduce
 
+import (
+	"bufio"
+	"encoding/json"
+	"os"
+	"strings"
+)
+
 func doReduce(
 	jobName string, // the name of the whole MapReduce job
 	reduceTask int, // which reduce task this is
@@ -44,4 +51,35 @@ func doReduce(
 	//
 	// Your code here (Part I).
 	//
+	intermediates := make(map[string][]string)
+	for i := 0; i < nMap; i++ {
+		inputFile, _:= os.Open(reduceName(jobName, i, reduceTask))
+		scanner := bufio.NewScanner(inputFile)
+		for scanner.Scan() {
+			line := scanner.Text()
+			splits := strings.Split(line, ",")
+			if len(splits) != 2 {
+				continue
+			}
+			key := splits[0]
+			value := splits[1]
+			values, ok := intermediates[key]
+			if !ok {
+				values = make([]string, 0)
+			}
+			intermediates[key] = append(values, value)
+		}
+		inputFile.Close()
+	}
+
+	outputFile, err := os.Create(outFile)
+	if err != nil {
+		debug("create outFile error: %v", err)
+		return
+	}
+	enc := json.NewEncoder(outputFile)
+	for key, values := range intermediates {
+		enc.Encode(KeyValue{key, reduceF(key, values)})
+	}
+	outputFile.Close()
 }
